@@ -11,6 +11,7 @@ interface DbSchema {
   articles: Article[];
   comments: Comment[];
   videos: Video[];
+  subscribers?: any[];
 }
 
 // In-memory fallback if file system is unavailable
@@ -193,5 +194,22 @@ export async function deleteArticle(id: string): Promise<boolean> {
     return true;
   }
   return false;
+}
+
+export async function insertSubscriber(email: string): Promise<boolean> {
+  const db = loadDb();
+  if (!db.subscribers) {
+    db.subscribers = [];
+  }
+  const exists = db.subscribers.some((s: any) => s.email === email);
+  if (exists) return true;
+
+  db.subscribers.push({
+    id: `sub-${Date.now()}`,
+    email,
+    created_at: new Date().toISOString()
+  });
+  saveDb(db);
+  return true;
 }
 

@@ -297,3 +297,21 @@ export async function deleteArticle(id: string): Promise<boolean> {
   }
   return db.deleteArticle(id);
 }
+
+export async function insertSubscriber(email: string): Promise<boolean> {
+  if (supabase) {
+    const { error } = await supabase
+      .from('subscribers')
+      .insert({ email });
+    if (error) {
+      // Code 23505 is PostgreSQL unique_violation (user already subscribed, which is a success)
+      if (error.code === '23505') {
+        return true;
+      }
+      console.warn('Erreur Supabase insertSubscriber, falling back to local database:', error.message);
+      return db.insertSubscriber(email);
+    }
+    return true;
+  }
+  return db.insertSubscriber(email);
+}

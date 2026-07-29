@@ -8,13 +8,35 @@ import { CATEGORIES } from '@/lib/categories';
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 5000);
+    if (!email.trim()) return;
+
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
+        setSubscribed(true);
+        setEmail('');
+        setTimeout(() => setSubscribed(false), 5000);
+      } else {
+        const err = await res.json();
+        setErrorMsg(err.error || "Une erreur est survenue.");
+        setTimeout(() => setErrorMsg(''), 5000);
+      }
+    } catch (err) {
+      setErrorMsg("Impossible de joindre le serveur de newsletter.");
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -41,20 +63,27 @@ export default function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="flex-grow bg-transparent text-xs text-white pl-4 pr-3 py-2.5 focus:outline-none placeholder-slate-600"
+              disabled={submitting}
+              className="flex-grow bg-transparent text-xs text-white pl-4 pr-3 py-2.5 focus:outline-none placeholder-slate-600 disabled:opacity-50"
               id="newsletter-footer-input"
             />
             <button 
               type="submit" 
-              className="bg-burkina-red hover:bg-red-750 text-white font-extrabold px-6 py-2.5 text-xs uppercase transition-colors"
+              disabled={submitting}
+              className="bg-burkina-red hover:bg-red-750 text-white font-extrabold px-6 py-2.5 text-xs uppercase transition-colors disabled:opacity-50"
             >
-              S'ABONNER
+              {submitting ? '...' : "S'ABONNER"}
             </button>
           </form>
         </div>
         {subscribed && (
           <div className="max-w-7xl mx-auto px-4 pt-2 text-center text-emerald-450 text-[11px] font-bold animate-pulse">
             Inscription validée ! Merci pour votre confiance.
+          </div>
+        )}
+        {errorMsg && (
+          <div className="max-w-7xl mx-auto px-4 pt-2 text-center text-rose-500 text-[11px] font-bold">
+            {errorMsg}
           </div>
         )}
       </div>
