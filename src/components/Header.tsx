@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Search, ChevronDown, User, Landmark } from 'lucide-react';
+import { Menu, X, Search, ChevronDown, User, Landmark, Mail } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
 import BreakingNewsTicker from '@/components/BreakingNewsTicker';
 
@@ -13,6 +13,43 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
   const router = useRouter();
+
+  // Modal subscription states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
+        setSubscribed(true);
+        setEmail('');
+        setTimeout(() => {
+          setSubscribed(false);
+          setIsModalOpen(false);
+        }, 3000);
+      } else {
+        const err = await res.json();
+        setErrorMsg(err.error || "Une erreur est survenue.");
+      }
+    } catch (err) {
+      setErrorMsg("Impossible de joindre le serveur.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +116,10 @@ export default function Header() {
           </div>
 
           {/* S'abonner Button */}
-          <button className="bg-burkina-red hover:bg-red-700 text-white font-extrabold text-[11px] md:text-xs py-2.5 px-5 rounded tracking-wider transition-colors uppercase">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-burkina-red hover:bg-red-700 text-white font-extrabold text-[11px] md:text-xs py-2.5 px-5 rounded tracking-wider transition-colors uppercase"
+          >
             S'ABONNER
           </button>
         </div>
@@ -208,6 +248,72 @@ export default function Header() {
         </div>
         <BreakingNewsTicker />
       </div>
+
+      {/* Subscription Modal Overlay */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+            
+            {/* Close Button */}
+            <button 
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Content */}
+            <div className="text-center space-y-3">
+              <div className="w-12 h-12 bg-red-50 dark:bg-red-950/20 text-burkina-red rounded-full flex items-center justify-center mx-auto">
+                <Mail className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-slate-850 dark:text-white font-display">Abonnez-vous à la Newsletter</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                Rejoignez la communauté de Faso Diaspora et recevez chaque jour notre condensé d'actualités directes et de grands dossiers.
+              </p>
+            </div>
+
+            {subscribed ? (
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-250 text-emerald-600 dark:text-emerald-450 p-4 rounded-2xl text-xs font-bold text-center animate-pulse">
+                🎉 Inscription validée ! Merci pour votre fidélité.
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label htmlFor="modal-subscribe-email" className="block text-[10px] font-bold text-slate-400 uppercase">Adresse e-mail</label>
+                  <input
+                    type="email"
+                    id="modal-subscribe-email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={submitting}
+                    placeholder="nom@example.com"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-burkina-red focus:outline-none rounded-xl py-3 px-4 text-xs md:text-sm text-slate-850 dark:text-white disabled:opacity-50"
+                  />
+                </div>
+
+                {errorMsg && (
+                  <p className="text-rose-500 text-[10px] font-bold text-left">{errorMsg}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-burkina-red hover:bg-red-750 text-white font-black text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-md transition-all disabled:opacity-50"
+                >
+                  {submitting ? 'Inscription...' : "S'abonner maintenant"}
+                </button>
+              </form>
+            )}
+
+            <p className="text-[10px] text-center text-slate-400 dark:text-slate-500">
+              Vous pouvez vous désabonner à tout moment. Aucune donnée n'est partagée.
+            </p>
+          </div>
+        </div>
+      )}
 
     </header>
   );
